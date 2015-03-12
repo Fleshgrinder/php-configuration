@@ -1,3 +1,18 @@
-# php5
+# PHP configuration
+Collection of PHP configuration templates for various use cases. The configuration always targets the latest stable PHP
+release.
 
-This is my personal php5-fpm configuration.
+## Install
+```shell
+sudo git clone https://github.com/Fleshgrinder/php-configuration.git /etc/php
+```
+
+## Weblinks
+Other repositories of interest:
+
+- [php-compile](https://github.com/Fleshgrinder/php-compile)
+
+## License
+> This is free and unencumbered software released into the public domain.
+>
+> For more information, please refer to <http://unlicense.org>
