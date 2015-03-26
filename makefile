@@ -66,7 +66,7 @@ TIDY_WEIGHT    := 050
 #  $1 - The name of the file.
 #  $2 - The weight of the file.
 define SYMLINK
-cd ./conf-enabled && ln --force --symbolic --verbose -- ../conf-available/$(strip $(1)).ini $(strip $(2))-$(strip $(1)).ini
+cd ./$(strip $(1))-enabled && ln --force --symbolic -- ../available/$(strip $(2)).ini $(strip $(3))-$(strip $(2)).ini
 endef
 
 
@@ -75,10 +75,11 @@ endef
 # ------------------------------------------------------------------------------
 
 
-all:
-	$(call SYMLINK, opcache, $(OPCACHE_WEIGHT))
-	$(call SYMLINK, intl, $(INTL_WEIGHT))
-	$(call SYMLINK, tidy, $(TIDY_WEIGHT))
+install:
+# FPM
+	$(call SYMLINK, fpm, opcache, $(OPCACHE_WEIGHT))
+	$(call SYMLINK, fpm, intl, $(INTL_WEIGHT))
+	$(call SYMLINK, fpm, tidy, $(TIDY_WEIGHT))
 	echo '' > $(PHP_FPM_LOG)
 	chown -- root:root $(PHP_FPM_LOG)
 	chmod -- 0644 $(PHP_FPM_LOG)
@@ -86,22 +87,29 @@ all:
 	chown -- $(PHP_FPM_USER):$(PHP_FPM_GROUP) $(PHP_FPM_CHDIR)
 	chmod -- 0755 $(PHP_FPM_CHDIR)
 	chmod -- g+s $(PHP_FPM_CHDIR)
+# CLI
+	$(call SYMLINK, cli, intl, $(INTL_WEIGHT))
+	$(call SYMLINK, cli, tidy, $(TIDY_WEIGHT))
 
-clean:
-	rm --force -- ./conf-enabled/*.ini $(PHP_FPM_LOG)
+uninstall:
+	rm --force -- ./*-enabled/*.ini $(PHP_FPM_LOG) $(PHP_FPM_LOG)
+	-rmdir -- $(PHP_FPM_CHDIR)
+	make uninstall-mongo
+	make uninstall-xdebug
 
 mongo:
-	pecl list mongo 2>&- 1>&- || pecl install mongo
-	$(call SYMLINK, mongo, $(MONGO_WEIGHT))
+	yes '' | pecl install --force --soft -- mongo
+	$(call SYMLINK, fpm, mongo, $(MONGO_WEIGHT))
+	$(call SYMLINK, cli, mongo, $(MONGO_WEIGHT))
 
 uninstall-mongo:
-	! pecl list mongo 2>&- 1>&- || pecl uninstall mongo
-	rm --force -- ./conf-enabled/$(MONGO_WEIGHT)-mongo.ini
+	pecl uninstall -- mongo
+	rm --force -- ./*-enabled/$(MONGO_WEIGHT)-mongo.ini
 
 xdebug:
-	pecl list xdebug 2>&- 1>&- || pecl install xdebug
-	$(call SYMLINK, xdebug, $(XDEBUG_WEIGHT))
+	pecl install --force --soft -- xdebug
+	$(call SYMLINK, cli, xdebug, $(XDEBUG_WEIGHT))
 
 uninstall-xdebug:
-	! pecl list xdebug 2>&- 1>&- || pecl uninstall xdebug
-	rm --force -- ./conf-enabled/$(XDEBUG_WEIGHT)-xdebug.ini
+	pecl uninstall -- xdebug
+	rm --force -- ./*-enabled/$(XDEBUG_WEIGHT)-xdebug.ini
