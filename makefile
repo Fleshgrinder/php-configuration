@@ -47,12 +47,10 @@ SHELL = /bin/sh
 PHP_FPM_LOG    := /var/log/php-fpm.log
 PHP_FPM_CHDIR  := /var/www
 PHP_FPM_USER   := www-data
-PHP_FPM_GROUP  := www-data
+PHP_FPM_GROUP  := $(PHP_FPM_USER)
 XDEBUG_WEIGHT  := 001
 OPCACHE_WEIGHT := 010
-INTL_WEIGHT    := 050
-MONGO_WEIGHT   := 050
-TIDY_WEIGHT    := 050
+DEFAULT_WEIGHT := 050
 
 
 # ------------------------------------------------------------------------------
@@ -60,13 +58,82 @@ TIDY_WEIGHT    := 050
 # ------------------------------------------------------------------------------
 
 
-# Create symbolic link and enable additional PHP configuration file.
+# Enable extension.
 #
 # ARGS:
-#  $1 - The name of the file.
-#  $2 - The weight of the file.
-define SYMLINK
-cd ./$(strip $(1))-enabled && ln --force --symbolic -- ../available/$(strip $(2)).ini $(strip $(3))-$(strip $(2)).ini
+#  $1 - The type to enable (either "cli" or "fpm").
+#  $2 - The name of the extension.
+#  $3 - The weight of the extension.
+define ENABLE
+    cd ./$(strip $1)-enabled && ln --force --symbolic -- ../available/$(strip $2).ini $(strip $3)-$(strip $2).ini
+endef
+
+# Enable extension for CLI.
+#
+# ARGS:
+#  $1 - The name of the extension.
+#  $2 - The weight of the extension.
+define ENABLE_CLI
+    $(call ENABLE, cli, $1, $2)
+endef
+
+# Enable extension for FPM.
+#
+# ARGS:
+#  $1 - The name of the extension.
+#  $2 - The weight of the extension.
+define ENABLE_FPM
+    $(call ENABLE, fpm, $1, $2)
+endef
+
+# Enable extension for CLI and FPM.
+#
+# ARGS:
+#  $1 - The name of the extension.
+#  $2 - The weight of the extension.
+define ENABLE_CLI_AND_FPM
+    $(call ENABLE_CLI, $1, $2)
+    $(call ENABLE_FPM, $1, $2)
+endef
+
+# Enable extension for CLI with default weight.
+#
+# ARGS:
+#  $1 - The name of the extension.
+define ENABLE_CLI_DEFAULT
+    $(call ENABLE, cli, $1, $(DEFAULT_WEIGHT))
+endef
+
+# Enable extension for FPM with default weight.
+#
+# ARGS:
+#  $1 - The name of the extension.
+define ENABLE_FPM_DEFAULT
+    $(call ENABLE, fpm, $1, $(DEFAULT_WEIGHT))
+endef
+
+# Enable extension for CLI and FPM with default weight.
+#
+# ARGS:
+#  $1 - The name of the extension.
+define ENABLE_CLI_AND_FPM_DEFAULT
+    $(call ENABLE_CLI_DEFAULT, $1)
+    $(call ENABLE_FPM_DEFAULT, $1)
+endef
+
+# Install PECL extension and enable for CLI and FPM with default weight.
+define PECL_INSTALL
+    $(eval EXTENSION := $(strip $@))
+    yes '' | pecl install --force --soft -- $(EXTENSION)
+    printf -- '; @see https://php.net/$(EXTENSION).configuration\nextension = $(EXTENSION).so\n' > ./available/$(EXTENSION).ini
+    $(call ENABLE_CLI_AND_FPM_DEFAULT, $(EXTENSION))
+endef
+
+# Uninstall PECL extension.
+define PECL_UNINSTALL
+    $(eval EXTENSION := $(basename $(strip $@)))
+    pecl uninstall -- $(EXTENSION)
+    rm --force -- ./*-enable/$(DEFAULT_WEIGHT)-$(EXTENSION).ini ./available/$(EXTENSION).ini
 endef
 
 
@@ -79,10 +146,9 @@ all:
 	make install xdebug
 
 install:
-# FPM
-	$(call SYMLINK, fpm, opcache, $(OPCACHE_WEIGHT))
-	$(call SYMLINK, fpm, intl, $(INTL_WEIGHT))
-	$(call SYMLINK, fpm, tidy, $(TIDY_WEIGHT))
+	$(call ENABLE_FPM, opcache, $(OPCACHE_WEIGHT))
+	$(call ENABLE_CLI_AND_FPM_DEFAULT, intl)
+	$(call ENABLE_CLI_AND_FPM_DEFAULT, tidy)
 	echo '' > $(PHP_FPM_LOG)
 	chown -- root:root $(PHP_FPM_LOG)
 	chmod -- 0644 $(PHP_FPM_LOG)
@@ -90,31 +156,28 @@ install:
 	chown -- $(PHP_FPM_USER):$(PHP_FPM_GROUP) $(PHP_FPM_CHDIR)
 	chmod -- 0755 $(PHP_FPM_CHDIR)
 	chmod -- g+s $(PHP_FPM_CHDIR)
-# CLI
-	$(call SYMLINK, cli, intl, $(INTL_WEIGHT))
-	$(call SYMLINK, cli, tidy, $(TIDY_WEIGHT))
 
 uninstall:
+	make bbcode.uninstall mongo.uninstall xdebug.uninstall
 	rm --force -- ./*-enabled/*.ini $(PHP_FPM_LOG) $(PHP_FPM_LOG)
 	-rmdir -- $(PHP_FPM_CHDIR)
-	make uninstall-mongo
-	make uninstall-xdebug
+
+bbcode:
+	$(PECL_INSTALL)
+
+bbcode.uninstall:
+	$(PECL_UNINSTALL)
 
 mongo:
-	yes '' | pecl install --force --soft -- mongo
-	printf -- '; @see https://php.net/mongo.configuration\nextension = mongo.so' > ./available/mongo.ini
-	$(call SYMLINK, fpm, mongo, $(MONGO_WEIGHT))
-	$(call SYMLINK, cli, mongo, $(MONGO_WEIGHT))
+	$(PECL_INSTALL)
 
-uninstall-mongo:
-	pecl uninstall -- mongo
-	rm --force -- ./*-enabled/$(MONGO_WEIGHT)-mongo.ini ./available/mongo.ini
+mongo.uninstall:
+	$(PECL_UNINSTALL)
 
 xdebug:
 	pecl install --force --soft -- xdebug
-	printf -- '; @see http://xdebug.org/docs/all_settings\nzend_extension   = xdebug.so\n\n[xdebug]\nxdebug.cli_color = 1' > ./available/xdebug.ini
-	$(call SYMLINK, cli, xdebug, $(XDEBUG_WEIGHT))
+	printf -- '; @see http://xdebug.org/docs/all_settings\nzend_extension = xdebug.so\n\n[xdebug]\nxdebug.cli_color = 1\n' > ./available/xdebug.ini
+	$(call ENABLE_CLI, xdebug, $(XDEBUG_WEIGHT))
 
-uninstall-xdebug:
-	pecl uninstall -- xdebug
-	rm --force -- ./*-enabled/$(XDEBUG_WEIGHT)-xdebug.ini ./available/xdebug.ini
+xdebug.uninstall:
+	$(PECL_UNINSTALL)
