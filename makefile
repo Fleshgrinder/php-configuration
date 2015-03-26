@@ -75,6 +75,9 @@ endef
 # ------------------------------------------------------------------------------
 
 
+all:
+	make install xdebug
+
 install:
 # FPM
 	$(call SYMLINK, fpm, opcache, $(OPCACHE_WEIGHT))
