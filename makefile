@@ -45,6 +45,9 @@ SHELL = /bin/sh
 .SUFFIXES:
 
 PHP_FPM_LOG    := /var/log/php-fpm.log
+PHP_FPM_CHDIR  := /var/www
+PHP_FPM_USER   := www-data
+PHP_FPM_GROUP  := www-data
 XDEBUG_WEIGHT  := 001
 OPACHE_WEIGHT  := 010
 INTL_WEIGHT    := 050
@@ -79,6 +82,10 @@ all:
 	echo '' > $(PHP_FPM_LOG)
 	chown -- root:root $(PHP_FPM_LOG)
 	chmod -- 0644 $(PHP_FPM_LOG)
+	[ -d $(PHP_FPM_CHDIR) ] || mkdir --parents -- $(PHP_FPM_CHDIR)
+	chown -- $(PHP_FPM_USER):$(PHP_FPM_GROUP) $(PHP_FPM_CHDIR)
+	chmod -- 0755 $(PHP_FPM_CHDIR)
+	chmod -- g+s $(PHP_FPM_CHDIR)
 
 clean:
 	rm --force -- ./conf-enabled/*.ini $(PHP_FPM_LOG)
