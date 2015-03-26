@@ -102,17 +102,19 @@ uninstall:
 
 mongo:
 	yes '' | pecl install --force --soft -- mongo
+	printf -- '; @see https://php.net/mongo.configuration\nextension = mongo.so' > ./available/mongo.ini
 	$(call SYMLINK, fpm, mongo, $(MONGO_WEIGHT))
 	$(call SYMLINK, cli, mongo, $(MONGO_WEIGHT))
 
 uninstall-mongo:
 	pecl uninstall -- mongo
-	rm --force -- ./*-enabled/$(MONGO_WEIGHT)-mongo.ini
+	rm --force -- ./*-enabled/$(MONGO_WEIGHT)-mongo.ini ./available/mongo.ini
 
 xdebug:
 	pecl install --force --soft -- xdebug
+	printf -- '; @see http://xdebug.org/docs/all_settings\nzend_extension   = xdebug.so\n\n[xdebug]\nxdebug.cli_color = 1' > ./available/xdebug.ini
 	$(call SYMLINK, cli, xdebug, $(XDEBUG_WEIGHT))
 
 uninstall-xdebug:
 	pecl uninstall -- xdebug
-	rm --force -- ./*-enabled/$(XDEBUG_WEIGHT)-xdebug.ini
+	rm --force -- ./*-enabled/$(XDEBUG_WEIGHT)-xdebug.ini ./available/xdebug.ini
