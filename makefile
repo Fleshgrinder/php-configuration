@@ -66,7 +66,7 @@ TIDY_WEIGHT    := 050
 #  $1 - The name of the file.
 #  $2 - The weight of the file.
 define SYMLINK
-cd ./conf-enabled && ln --force --symbolic --verbose -- ../conf-available/$(strip $(1)).ini ./conf-enabled/$(strip $(2))-$(strip $(1)).ini
+cd ./conf-enabled && ln --force --symbolic --verbose -- ../conf-available/$(strip $(1)).ini $(strip $(2))-$(strip $(1)).ini
 endef
 
 
