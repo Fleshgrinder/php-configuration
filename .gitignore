@@ -1,7 +1,7 @@
-.idea
-extensions
-*-enabled-extensions/*.ini
-php-fpm.conf*
-*.default
-*.dist
-*~
+/.idea/
+/extensions
+/*-enabled-extensions/*.ini
+/php-fpm.conf*
+/*.default
+/*.dist
+/*~
