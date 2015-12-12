@@ -1,1 +1,7 @@
-* text=auto eol=lf
+*           text=auto eol=lf
+.*          text eol=lf
+*.conf      text eol=lf
+*.ini       text eol=lf
+*.md        text eol=lf
+*.txt       text eol=lf
+makefile    text eol=lf
