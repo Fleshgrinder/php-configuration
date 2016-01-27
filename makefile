@@ -116,7 +116,7 @@ endef
 
 
 all:
-	make install xdebug
+	make install
 
 install:
 	$(call ENABLE_FPM, opcache, $(OPCACHE_WEIGHT))
@@ -145,6 +145,12 @@ mongo:
 	$(PECL_INSTALL)
 
 mongo.uninstall:
+	$(PECL_UNINSTALL)
+
+redis:
+	$(PECL_INSTALL)
+
+redis.uninstall:
 	$(PECL_UNINSTALL)
 
 xdebug:
